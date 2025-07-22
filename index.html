@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>包裹查詢與簽收系統</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    h1 { color: #333; }
+    input, button { padding: 8px; margin: 5px 0; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #f5f5f5; }
+    .sign-btn { background-color: #4CAF50; color: white; border: none; cursor: pointer; padding: 5px 10px; }
+    .sign-btn:hover { background-color: #45a049; }
+  </style>
+</head>
+<body>
+  <h1>包裹查詢與簽收系統</h1>
+  <label>姓名或學號：</label>
+  <input type="text" id="keyword" placeholder="輸入姓名或學號">
+  <button onclick="searchParcel()">查詢</button>
+
+  <table id="resultTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>收件日期</th>
+        <th>件數</th>
+        <th>物品放置位置</th>
+        <th>寢室號碼</th>
+        <th>收件人姓名</th>
+        <th>學號</th>
+        <th>簽收</th>
+      </tr>
+    </thead>
+    <tbody id="resultBody"></tbody>
+  </table>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbyKvmfF8goX9YxwtyNilHBork-AiLiqNsjw5taJAE2ueJwyDagbMyJubxTaD9Et9rtp/exec";
+
+    async function searchParcel() {
+      const keyword = document.getElementById("keyword").value.trim();
+      if (!keyword) {
+        alert("請輸入姓名或學號！");
+        return;
+      }
+      const response = await fetch(API_URL + "?keyword=" + encodeURIComponent(keyword));
+      const data = await response.json();
+      renderTable(data);
+    }
+
+    function renderTable(data) {
+      const table = document.getElementById("resultTable");
+      const tbody = document.getElementById("resultBody");
+      tbody.innerHTML = "";
+      if (data.length === 0) {
+        table.style.display = "none";
+        alert("查無資料或已簽收！");
+        return;
+      }
+      data.forEach(item => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${item.收件日期}</td>
+          <td>${item.件數}</td>
+          <td>${item.物品放置位置}</td>
+          <td>${item.寢室號碼}</td>
+          <td>${item.收件人姓名}</td>
+          <td>${item.學號}</td>
+          <td><button class="sign-btn" onclick="signParcel('${item.收件人姓名}','${item.學號}')">簽收</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+      table.style.display = "table";
+    }
+
+    async function signParcel(name, studentId) {
+      if (!confirm(`確定簽收 ${name} (${studentId}) 的包裹嗎？`)) return;
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `name=${encodeURIComponent(name)}&studentId=${encodeURIComponent(studentId)}`
+      });
+      const result = await response.json();
+      if (result.success) {
+        alert("簽收完成！");
+        searchParcel();
+      } else {
+        alert("簽收失敗：" + (result.message || ""));
+      }
+    }
+  </script>
+</body>
+</html>
